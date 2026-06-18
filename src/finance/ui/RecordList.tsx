@@ -1,5 +1,4 @@
 // UI: Листа финансијских записа са формом за унос/измену (само Admin).
-// Viewer види само табелу без акција.
 
 import { useState } from "react";
 import {
@@ -28,15 +27,17 @@ const EMPTY_FORM = {
 };
 
 export function RecordList({ role, currentUserId }: Props) {
-  const records = useRecordList();
+  const records    = useRecordList();
   const categories = useCategoryList();
-  const isAdmin = role === "Admin";
+  const isAdmin    = role === "Admin";
 
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [editId, setEditId] = useState<string | null>(null);
+  const [form,      setForm]      = useState(EMPTY_FORM);
+  const [editId,    setEditId]    = useState<string | null>(null);
   const [formError, setFormError] = useState("");
+  const [open,      setOpen]      = useState(false);
 
-  const activeCategories = categories.filter((c) => c.active);
+  const activeCategories    = categories.filter((c) => c.active);
+  const filteredCategories  = activeCategories.filter((c) => c.type === form.type);
 
   function categoryName(id: string): string {
     const cat = categories.find((c) => c.id === id);
@@ -47,8 +48,8 @@ export function RecordList({ role, currentUserId }: Props) {
   function validate(): string {
     if (!form.value || isNaN(Number(form.value)) || Number(form.value) <= 0)
       return "Износ мора бити позитиван број.";
-    if (!form.currency.trim()) return "Валута је обавезна.";
-    if (!form.categoryId) return "Категорија је обавезна.";
+    if (!form.currency.trim())   return "Валута је обавезна.";
+    if (!form.categoryId)        return "Категорија је обавезна.";
     if (!form.counterparty.trim()) return "Контрагент је обавезан.";
     return "";
   }
@@ -59,148 +60,203 @@ export function RecordList({ role, currentUserId }: Props) {
     setFormError("");
 
     const payload = {
-      type: form.type,
-      amount: { value: Number(form.value), currency: form.currency.trim().toUpperCase() },
-      dateTime: new Date(form.dateTime),
-      categoryId: form.categoryId,
+      type:         form.type,
+      amount:       { value: Number(form.value), currency: form.currency.trim().toUpperCase() },
+      dateTime:     new Date(form.dateTime),
+      categoryId:   form.categoryId,
       counterparty: form.counterparty.trim(),
-      description: form.description.trim() || undefined,
-      authorId: currentUserId,
+      description:  form.description.trim() || undefined,
+      authorId:     currentUserId,
     };
 
     if (editId) {
       await updateFinanceRecord(editId, {
-        type: payload.type,
-        amount: payload.amount,
-        dateTime: payload.dateTime,
-        categoryId: payload.categoryId,
+        type:         payload.type,
+        amount:       payload.amount,
+        dateTime:     payload.dateTime,
+        categoryId:   payload.categoryId,
         counterparty: payload.counterparty,
-        description: payload.description,
+        description:  payload.description,
       });
       setEditId(null);
     } else {
       await createFinanceRecord(payload);
     }
     setForm(EMPTY_FORM);
+    setOpen(false);
   }
 
   function startEdit(r: FinanceRecord) {
     setEditId(r.id);
     setForm({
-      type: r.type,
-      value: String(r.amount.value),
-      currency: r.amount.currency,
-      dateTime: r.dateTime.toISOString().slice(0, 16),
-      categoryId: r.categoryId,
+      type:         r.type,
+      value:        String(r.amount.value),
+      currency:     r.amount.currency,
+      dateTime:     r.dateTime.toISOString().slice(0, 16),
+      categoryId:   r.categoryId,
       counterparty: r.counterparty,
-      description: r.description ?? "",
+      description:  r.description ?? "",
     });
+    setOpen(true);
   }
 
   function cancelEdit() {
     setEditId(null);
     setForm(EMPTY_FORM);
     setFormError("");
+    setOpen(false);
   }
 
-  const sorted = [...records].sort(
-    (a, b) => b.dateTime.getTime() - a.dateTime.getTime()
-  );
-
-  // Форма приказује само категорије које одговарају тренутно изабраном типу.
-  const filteredCategories = activeCategories.filter((c) => c.type === form.type);
+  const sorted = [...records].sort((a, b) => b.dateTime.getTime() - a.dateTime.getTime());
 
   return (
-    <div>
-      <h2>Финансијски записи</h2>
+    <div className="rl-root">
 
+      {/* ── Форма (само Admin) ── */}
       {isAdmin && (
-        <div>
-          <h3>{editId ? "Измени запис" : "Нови запис"}</h3>
-          <select
-            value={form.type}
-            onChange={(e) =>
-              setForm({ ...form, type: e.target.value as RecordType, categoryId: "" })
-            }
+        <div className="card">
+          <button
+            className={`form-toggle ${open ? "open" : ""}`}
+            onClick={() => { setOpen((v) => !v); if (open) cancelEdit(); }}
           >
-            <option value="Приход">Приход</option>
-            <option value="Расход">Расход</option>
-          </select>
-          <input
-            placeholder="Износ"
-            value={form.value}
-            onChange={(e) => setForm({ ...form, value: e.target.value })}
-          />
-          <input
-            placeholder="Валута (нпр. RSD)"
-            value={form.currency}
-            onChange={(e) => setForm({ ...form, currency: e.target.value })}
-            style={{ width: 80 }}
-          />
-          <input
-            type="datetime-local"
-            value={form.dateTime}
-            onChange={(e) => setForm({ ...form, dateTime: e.target.value })}
-          />
-          <select
-            value={form.categoryId}
-            onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-          >
-            <option value="">— Категорија —</option>
-            {filteredCategories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <input
-            placeholder="Контрагент"
-            value={form.counterparty}
-            onChange={(e) => setForm({ ...form, counterparty: e.target.value })}
-          />
-          <input
-            placeholder="Опис (опционо)"
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-          />
-          <button onClick={handleSubmit}>{editId ? "Сачувај" : "Додај"}</button>
-          {editId && <button onClick={cancelEdit}>Откажи</button>}
-          {formError && <span style={{ color: "red" }}>{formError}</span>}
+            <span>{open ? "✕  Затвори" : "+ Нови запис"}</span>
+          </button>
+
+          {open && (
+            <div className="record-form">
+
+              {/* Ред 1: тип */}
+              <div className="form-type-row">
+                {(["Приход", "Расход"] as RecordType[]).map((t) => (
+                  <button
+                    key={t}
+                    className={`type-btn ${form.type === t ? (t === "Приход" ? "income-active" : "expense-active") : ""}`}
+                    onClick={() => setForm({ ...form, type: t, categoryId: "" })}
+                  >
+                    {t === "Приход" ? "↑ Приход" : "↓ Расход"}
+                  </button>
+                ))}
+              </div>
+
+              {/* Ред 2: износ + валута */}
+              <div className="form-row">
+                <div className="form-field form-field--grow">
+                  <label className="field-label">Износ</label>
+                  <input
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={form.value}
+                    onChange={(e) => setForm({ ...form, value: e.target.value })}
+                  />
+                </div>
+                <div className="form-field form-field--currency">
+                  <label className="field-label">Валута</label>
+                  <input
+                    placeholder="RSD"
+                    value={form.currency}
+                    onChange={(e) => setForm({ ...form, currency: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* Ред 3: категорија + датум */}
+              <div className="form-row">
+                <div className="form-field form-field--grow">
+                  <label className="field-label">Категорија</label>
+                  <select
+                    value={form.categoryId}
+                    onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+                  >
+                    <option value="">— Одабери —</option>
+                    {filteredCategories.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-field form-field--date">
+                  <label className="field-label">Датум и време</label>
+                  <input
+                    type="datetime-local"
+                    value={form.dateTime}
+                    onChange={(e) => setForm({ ...form, dateTime: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* Ред 4: контрагент */}
+              <div className="form-field">
+                <label className="field-label">Контрагент</label>
+                <input
+                  placeholder="Нпр. Прометеј д.о.о."
+                  value={form.counterparty}
+                  onChange={(e) => setForm({ ...form, counterparty: e.target.value })}
+                />
+              </div>
+
+              {/* Ред 5: опис */}
+              <div className="form-field">
+                <label className="field-label">Опис <span className="field-optional">(опционо)</span></label>
+                <input
+                  placeholder=""
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                />
+              </div>
+
+              {formError && <p className="error-text">{formError}</p>}
+
+              <div className="form-actions">
+                <button className="primary" onClick={handleSubmit}>
+                  {editId ? "Сачувај измене" : "Додај запис"}
+                </button>
+                {editId && (
+                  <button className="ghost" onClick={cancelEdit}>Откажи</button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      <table>
-        <thead>
-          <tr>
-            <th>Датум</th>
-            <th>Тип</th>
-            <th>Износ</th>
-            <th>Категорија</th>
-            <th>Контрагент</th>
-            <th>Опис</th>
-            {isAdmin && <th>Акција</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((r) => (
-            <tr key={r.id}>
-              <td>{r.dateTime.toLocaleString("sr-RS")}</td>
-              <td>{r.type}</td>
-              <td>
-                {r.amount.value.toLocaleString("sr-RS")} {r.amount.currency}
-              </td>
-              <td>{categoryName(r.categoryId)}</td>
-              <td>{r.counterparty}</td>
-              <td>{r.description ?? "—"}</td>
-              {isAdmin && (
-                <td>
-                  <button onClick={() => startEdit(r)}>Уреди</button>
-                </td>
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* ── Листа записа ── */}
+      <div className="card">
+        <p className="section-title">Сви записи</p>
+        {sorted.length === 0 ? (
+          <p className="empty-inline">Нема записа.</p>
+        ) : (
+          <div className="record-list">
+            {sorted.map((r) => {
+              const isIncome = r.type === "Приход";
+              return (
+                <div key={r.id} className="record-item">
+                  <div className={`recent-icon ${isIncome ? "income-icon" : "expense-icon"}`}>
+                    {isIncome ? "↑" : "↓"}
+                  </div>
+                  <div className="record-meta">
+                    <span className="recent-counterparty">{r.counterparty}</span>
+                    <span className="recent-cat">
+                      {categoryName(r.categoryId)}
+                      {r.description && <> · {r.description}</>}
+                    </span>
+                    <span className="recent-time">
+                      {r.dateTime.toLocaleString("sr-RS")}
+                    </span>
+                  </div>
+                  <div className="record-right">
+                    <span className={`recent-amount ${isIncome ? "income-val" : "expense-val"}`}>
+                      {isIncome ? "+" : "−"}{r.amount.value.toLocaleString("sr-RS")} {r.amount.currency}
+                    </span>
+                    {isAdmin && (
+                      <button className="ghost edit-btn" onClick={() => startEdit(r)}>Уреди</button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }
