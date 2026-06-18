@@ -153,37 +153,38 @@ export function RecordList({ role, currentUserId }: Props) {
                   <label className="field-label">Валута</label>
                   <input
                     placeholder="RSD"
+                    maxLength={5}
                     value={form.currency}
                     onChange={(e) => setForm({ ...form, currency: e.target.value })}
                   />
                 </div>
               </div>
 
-              {/* Ред 3: категорија + датум */}
-              <div className="form-row">
-                <div className="form-field form-field--grow">
-                  <label className="field-label">Категорија</label>
-                  <select
-                    value={form.categoryId}
-                    onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-                  >
-                    <option value="">— Одабери —</option>
-                    {filteredCategories.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-field form-field--date">
-                  <label className="field-label">Датум и време</label>
-                  <input
-                    type="datetime-local"
-                    value={form.dateTime}
-                    onChange={(e) => setForm({ ...form, dateTime: e.target.value })}
-                  />
-                </div>
+              {/* Ред 3: категорија */}
+              <div className="form-field">
+                <label className="field-label">Категорија</label>
+                <select
+                  value={form.categoryId}
+                  onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+                >
+                  <option value="">— Одабери —</option>
+                  {filteredCategories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
               </div>
 
-              {/* Ред 4: контрагент */}
+              {/* Ред 4а: датум */}
+              <div className="form-field">
+                <label className="field-label">Датум и време</label>
+                <input
+                  type="datetime-local"
+                  value={form.dateTime}
+                  onChange={(e) => setForm({ ...form, dateTime: e.target.value })}
+                />
+              </div>
+
+              {/* Ред 5: контрагент */}
               <div className="form-field">
                 <label className="field-label">Контрагент</label>
                 <input
@@ -193,7 +194,7 @@ export function RecordList({ role, currentUserId }: Props) {
                 />
               </div>
 
-              {/* Ред 5: опис */}
+              {/* Ред 6: опис */}
               <div className="form-field">
                 <label className="field-label">Опис <span className="field-optional">(опционо)</span></label>
                 <input
