@@ -526,6 +526,7 @@ tbody tr:hover td { background: var(--bg-elevated); }
   background: transparent; color: var(--text-secondary);
   font-size: 0.8rem; font-weight: 500; text-align: center;
   min-height: 36px;
+  justify-content: center;
   transition: background var(--transition), color var(--transition);
 }
 .period-tab:hover:not(:disabled) {
@@ -701,3 +702,77 @@ tbody tr:hover td { background: var(--bg-elevated); }
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .bottom-nav { padding-bottom: env(safe-area-inset-bottom); }
 }
+
+/* ── Funds ────────────────────────────────────────────────────────────────── */
+
+.funds-root { display: flex; flex-direction: column; gap: 16px; }
+
+.funds-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.fund-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+
+.fund-card-header {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+}
+.fund-name {
+  font-size: 0.95rem; font-weight: 600; color: var(--text-primary);
+}
+.fund-desc {
+  font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;
+}
+.fund-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+.fund-amounts { display: flex; flex-direction: column; gap: 4px; }
+.fund-amount-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+}
+.fund-amount-label { font-size: 0.72rem; color: var(--text-muted); }
+.fund-amount-val   { font-size: 0.85rem; font-weight: 600; }
+
+/* progress bar */
+.fund-bar-track {
+  height: 8px; border-radius: 999px;
+  background: var(--bg-elevated); overflow: hidden;
+}
+.fund-bar-fill {
+  height: 100%; border-radius: 999px;
+  transition: width 0.4s ease, background 0.3s ease;
+}
+.fund-pct-label {
+  font-size: 0.68rem; color: var(--text-muted); text-align: right;
+  margin-top: -6px;
+}
+
+.fund-transfer-btns {
+  display: flex; gap: 8px;
+}
+.fund-transfer-btns button { flex: 1; justify-content: center; font-size: 0.8rem; }
+
+.fund-transfer-form { display: flex; flex-direction: column; gap: 8px; }
+
+.fund-edit-form { display: flex; flex-direction: column; }
+
+/* wallet reserved row */
+.wallet-reserved-row {
+  display: flex; align-items: stretch;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  overflow: hidden; margin-bottom: 4px;
+}
+.wallet-reserved-item {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; gap: 3px; padding: 10px 8px;
+}
+.wallet-reserved-divider { width: 1px; background: var(--border); flex-shrink: 0; }
+.wallet-reserved-label { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.wallet-reserved-val   { font-size: 0.9rem; font-weight: 600; }

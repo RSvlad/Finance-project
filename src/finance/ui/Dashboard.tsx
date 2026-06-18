@@ -3,8 +3,11 @@
 import { useState, useMemo } from "react";
 import { useRecordList } from "@finance/application/useRecordList";
 import { useCategoryList } from "@finance/application/useCategoryList";
+import { useFundList } from "@finance/application/useFundList";
+import { freeBalanceByCurrency } from "@finance/application/useFundManager";
 import type { RecordType } from "@finance/domain/Category";
 import type { FinanceRecord } from "@finance/domain/FinanceRecord";
+import type { Fund } from "@finance/domain/Fund";
 
 type PeriodPreset = "данас" | "овај месец" | "ова година" | "све";
 
@@ -61,15 +64,46 @@ function aggregate(records: FinanceRecord[]): Record<string, { income: number; e
 
 // ── Подкомпоненте ──────────────────────────────────────────────────────────
 
-function WalletCard({ currency, income, expense }: { currency: string; income: number; expense: number }) {
-  const balance = income - expense;
+function WalletCard({
+  currency, income, expense, funds,
+}: {
+  currency: string; income: number; expense: number; funds: Fund[];
+}) {
+  const balance  = income - expense;
   const positive = balance >= 0;
+
+  // резервисано у овој валути
+  const totalReserved = funds
+    .filter((f) => f.capacity.currency === currency)
+    .reduce((sum, f) => sum + f.reserved, 0);
+  const free = balance - totalReserved;
+  const hasReservations = totalReserved > 0;
+
   return (
     <div className="wallet-card">
       <p className="wallet-currency">{currency}</p>
       <p className={`wallet-balance ${positive ? "pos" : "neg"}`}>
         {fmt(balance, currency)}
       </p>
+
+      {hasReservations && (
+        <div className="wallet-reserved-row">
+          <div className="wallet-reserved-item">
+            <span className="wallet-reserved-label">Слободно</span>
+            <span className={`wallet-reserved-val ${free >= 0 ? "income-val" : "expense-val"}`}>
+              {fmt(free, currency)}
+            </span>
+          </div>
+          <div className="wallet-reserved-divider" />
+          <div className="wallet-reserved-item">
+            <span className="wallet-reserved-label">Резервисано</span>
+            <span className="wallet-reserved-val" style={{ color: "var(--accent)" }}>
+              {fmt(totalReserved, currency)}
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="wallet-stats">
         <div className="wallet-stat">
           <span className="stat-dot income-dot" />
@@ -83,6 +117,7 @@ function WalletCard({ currency, income, expense }: { currency: string; income: n
           <span className="stat-val expense-val">−{fmtCompact(expense)}</span>
         </div>
       </div>
+
       {/* ratio bar */}
       {income + expense > 0 && (() => {
         const pct = Math.round((income / (income + expense)) * 100);
@@ -126,6 +161,7 @@ function RecentItem({ record, categoryName }: { record: FinanceRecord; categoryN
 export function Dashboard() {
   const records    = useRecordList();
   const categories = useCategoryList();
+  const funds      = useFundList();
 
   const [period,         setPeriod]         = useState<PeriodPreset>("овај месец");
   const [typeFilter,     setTypeFilter]     = useState<RecordType | "Сви">("Сви");
@@ -151,6 +187,9 @@ export function Dashboard() {
     [filtered]
   );
 
+  // Не користимо freeBalanceByCurrency директно овде — WalletCard рачуна сам
+  void freeBalanceByCurrency; // imported ради евентуалне будуће употребе
+
   function catName(id: string): string {
     return categories.find((c) => c.id === id)?.name ?? "—";
   }
@@ -168,7 +207,7 @@ export function Dashboard() {
         </div>
       ) : (
         totalCurrencies.map((cur) => (
-          <WalletCard key={cur} currency={cur} {...totalSummary[cur]} />
+          <WalletCard key={cur} currency={cur} {...totalSummary[cur]} funds={funds} />
         ))
       )}
 

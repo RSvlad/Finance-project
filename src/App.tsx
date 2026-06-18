@@ -3,14 +3,23 @@ import { useAuth } from "@identity/application/AuthContext";
 import { CategoryList } from "@finance/ui/CategoryList";
 import { RecordList } from "@finance/ui/RecordList";
 import { Dashboard } from "@finance/ui/Dashboard";
+import { FundsPage } from "@finance/ui/FundsPage";
 
-type View = "dashboard" | "records" | "categories";
+type View = "dashboard" | "records" | "funds" | "categories";
 
 const NAV_ITEMS: { id: View; label: string; icon: string }[] = [
   { id: "dashboard",  label: "Стање",      icon: "◈" },
   { id: "records",    label: "Записи",     icon: "≡" },
+  { id: "funds",      label: "Средства",   icon: "🗂" },
   { id: "categories", label: "Категорије", icon: "⊞" },
 ];
+
+const VIEW_TITLES: Record<View, string> = {
+  dashboard:  "Стање",
+  records:    "Записи",
+  funds:      "Средства",
+  categories: "Категорије",
+};
 
 export default function App() {
   const { user, loading, signIn, signOutUser } = useAuth();
@@ -43,13 +52,7 @@ export default function App() {
       {/* ── Top bar ── */}
       <header className="top-bar">
         <span className="top-bar-logo">💰</span>
-        <span className="top-bar-title">
-          {{
-            dashboard:  "Стање",
-            records:    "Записи",
-            categories: "Категорије",
-          }[view]}
-        </span>
+        <span className="top-bar-title">{VIEW_TITLES[view]}</span>
         <div className="top-bar-right">
           <span className="role-badge">{user.role}</span>
           <button className="ghost icon-btn" title="Одјава" onClick={signOutUser}>⏏</button>
@@ -60,6 +63,7 @@ export default function App() {
       <main className="app-main">
         {view === "dashboard"  && <Dashboard />}
         {view === "records"    && <RecordList role={user.role} currentUserId={user.id} />}
+        {view === "funds"      && <FundsPage role={user.role} />}
         {view === "categories" && <CategoryList role={user.role} />}
       </main>
 

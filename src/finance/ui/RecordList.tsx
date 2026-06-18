@@ -7,6 +7,7 @@ import {
 } from "@finance/infrastructure/FinanceRecordRepository";
 import { useRecordList } from "@finance/application/useRecordList";
 import { useCategoryList } from "@finance/application/useCategoryList";
+import { useFundList } from "@finance/application/useFundList";
 import type { FinanceRecord } from "@finance/domain/FinanceRecord";
 import type { RecordType } from "@finance/domain/Category";
 import type { Role } from "@identity/domain/User";
@@ -24,11 +25,13 @@ const EMPTY_FORM = {
   categoryId: "",
   counterparty: "",
   description: "",
+  fundId: "",
 };
 
 export function RecordList({ role, currentUserId }: Props) {
   const records    = useRecordList();
   const categories = useCategoryList();
+  const funds      = useFundList();
   const isAdmin    = role === "Admin";
 
   const [form,      setForm]      = useState(EMPTY_FORM);
@@ -36,8 +39,13 @@ export function RecordList({ role, currentUserId }: Props) {
   const [formError, setFormError] = useState("");
   const [open,      setOpen]      = useState(false);
 
-  const activeCategories    = categories.filter((c) => c.active);
-  const filteredCategories  = activeCategories.filter((c) => c.type === form.type);
+  const activeCategories   = categories.filter((c) => c.active);
+  const filteredCategories = activeCategories.filter((c) => c.type === form.type);
+
+  // Средства која имају исту валуту као унети износ
+  const compatibleFunds = funds.filter(
+    (f) => f.capacity.currency === form.currency.trim().toUpperCase()
+  );
 
   function categoryName(id: string): string {
     const cat = categories.find((c) => c.id === id);
@@ -45,11 +53,15 @@ export function RecordList({ role, currentUserId }: Props) {
     return cat.active ? cat.name : `${cat.name} (деактивирана)`;
   }
 
+  function fundName(id: string): string {
+    return funds.find((f) => f.id === id)?.name ?? "";
+  }
+
   function validate(): string {
     if (!form.value || isNaN(Number(form.value)) || Number(form.value) <= 0)
       return "Износ мора бити позитиван број.";
-    if (!form.currency.trim())   return "Валута је обавезна.";
-    if (!form.categoryId)        return "Категорија је обавезна.";
+    if (!form.currency.trim())     return "Валута је обавезна.";
+    if (!form.categoryId)          return "Категорија је обавезна.";
     if (!form.counterparty.trim()) return "Контрагент је обавезан.";
     return "";
   }
@@ -67,6 +79,7 @@ export function RecordList({ role, currentUserId }: Props) {
       counterparty: form.counterparty.trim(),
       description:  form.description.trim() || undefined,
       authorId:     currentUserId,
+      fundId:       form.fundId || undefined,
     };
 
     if (editId) {
@@ -77,6 +90,7 @@ export function RecordList({ role, currentUserId }: Props) {
         categoryId:   payload.categoryId,
         counterparty: payload.counterparty,
         description:  payload.description,
+        fundId:       payload.fundId,
       });
       setEditId(null);
     } else {
@@ -96,6 +110,7 @@ export function RecordList({ role, currentUserId }: Props) {
       categoryId:   r.categoryId,
       counterparty: r.counterparty,
       description:  r.description ?? "",
+      fundId:       r.fundId ?? "",
     });
     setOpen(true);
   }
@@ -146,7 +161,7 @@ export function RecordList({ role, currentUserId }: Props) {
                     inputMode="decimal"
                     placeholder="0.00"
                     value={form.value}
-                    onChange={(e) => setForm({ ...form, value: e.target.value })}
+                    onChange={(e) => setForm({ ...form, value: e.target.value, fundId: "" })}
                   />
                 </div>
                 <div className="form-field form-field--currency">
@@ -155,7 +170,7 @@ export function RecordList({ role, currentUserId }: Props) {
                     placeholder="RSD"
                     maxLength={5}
                     value={form.currency}
-                    onChange={(e) => setForm({ ...form, currency: e.target.value })}
+                    onChange={(e) => setForm({ ...form, currency: e.target.value, fundId: "" })}
                   />
                 </div>
               </div>
@@ -193,6 +208,26 @@ export function RecordList({ role, currentUserId }: Props) {
                   onChange={(e) => setForm({ ...form, counterparty: e.target.value })}
                 />
               </div>
+
+              {/* Ред 5: средство (опционо — само ако постоје компатибилна средства) */}
+              {compatibleFunds.length > 0 && (
+                <div className="form-field">
+                  <label className="field-label">
+                    Средство <span className="field-optional">(опционо — терети средство уместо касе)</span>
+                  </label>
+                  <select
+                    value={form.fundId}
+                    onChange={(e) => setForm({ ...form, fundId: e.target.value })}
+                  >
+                    <option value="">— Централна каса —</option>
+                    {compatibleFunds.map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.name} ({f.reserved.toLocaleString("sr-RS")} / {f.capacity.value.toLocaleString("sr-RS")} {f.capacity.currency})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Ред 6: опис */}
               <div className="form-field">
@@ -237,6 +272,7 @@ export function RecordList({ role, currentUserId }: Props) {
                     <span className="recent-counterparty">{r.counterparty}</span>
                     <span className="recent-cat">
                       {categoryName(r.categoryId)}
+                      {r.fundId && <> · <span style={{ color: "var(--accent)" }}>📁 {fundName(r.fundId)}</span></>}
                       {r.description && <> · {r.description}</>}
                     </span>
                     <span className="recent-time">
