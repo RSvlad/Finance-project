@@ -2,47 +2,30 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Помоћне функције ──────────────────────────────────────────────────────
-
-    // Да ли је корисник аутентификован?
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Да ли корисник постоји у whitelist-у (allowedUsers/{email})?
     function isAllowed() {
       return isSignedIn()
         && exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email));
     }
 
-    // Да ли је корисник Admin?
     function isAdmin() {
       return isAllowed()
         && get(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email)).data.role == "Admin";
     }
 
-    // ── allowedUsers ──────────────────────────────────────────────────────────
-    // Корисник може читати само свој документ (doc ID = email, видети ADR-012).
-    // Нема write приступа преко апликације — управља се у Firestore конзоли (ADR-008).
     match /allowedUsers/{email} {
       allow read: if isSignedIn() && request.auth.token.email == email;
       allow write: if false;
     }
 
-    // ── categories ────────────────────────────────────────────────────────────
-    // Читање: сви whitelist корисници (Admin + Viewer).
-    // Креирање: само Admin.
-    // Ажурирање: само Admin; системска категорија (system == true) не може мењати
-    //            name, type ни active поља — штити „Непознато" (ADR-010).
-    // Брисање: никад (меко брисање преко поља `active`).
     match /categories/{categoryId} {
       allow read: if isAllowed();
-
       allow create: if isAdmin();
-
       allow update: if isAdmin()
         && (
-          // Ако је системска категорија, не дозволи измену заштићених поља.
           !resource.data.system
           || (
             request.resource.data.name   == resource.data.name
@@ -50,15 +33,10 @@ service cloud.firestore {
             && request.resource.data.active == resource.data.active
           )
         );
-
       allow delete: if false;
     }
 
-    // ── financeRecords ────────────────────────────────────────────────────────
-    // Читање: сви whitelist корисници.
-    // Креирање и ажурирање: само Admin.
-    // Брисање: никад (исправка = update постојећег документа, ADR-015).
-    match /financeRecords/{recordId} {
+    match /transactions/{recordId} {
       allow read: if isAllowed();
       allow create: if isAdmin();
       allow update: if isAdmin();
