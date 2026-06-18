@@ -1,14 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@identity/application/AuthContext";
 import { CategoryList } from "@finance/ui/CategoryList";
 import { RecordList } from "@finance/ui/RecordList";
 import { Dashboard } from "@finance/ui/Dashboard";
+import { ensureSystemCategories } from "@finance/infrastructure/CategoryRepository";
 
 type View = "dashboard" | "records" | "categories";
 
 export default function App() {
   const { user, loading, signIn, signOutUser } = useAuth();
   const [view, setView] = useState<View>("dashboard");
+
+  useEffect(() => {
+    if (user?.role === "Admin") {
+      ensureSystemCategories().catch(console.error);
+    }
+  }, [user]);
 
   if (loading) {
     return <p>Учитавање...</p>;
