@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      // GitHub Pages SPA fallback: редиректује 404 на index.html са сачуваном путањом.
+      const path = window.location.pathname;
+      const search = window.location.search;
+      const hash = window.location.hash;
+      const base = "/finance-tracker";
+      const rest = path.slice(base.length) || "/";
+      window.location.replace(
+        base + "/?redirect=" + encodeURIComponent(rest + search + hash)
+      );
+    </script>
+  </head>
+  <body></body>
+</html>
