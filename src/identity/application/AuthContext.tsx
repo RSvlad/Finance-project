@@ -33,13 +33,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (!firebaseUser) {
+      if (!firebaseUser || !firebaseUser.email) {
         setUser(null);
         setLoading(false);
         return;
       }
 
-      const loaded = await loadUser(firebaseUser.uid);
+      const loaded = await loadUser(firebaseUser.uid, firebaseUser.email);
       setUser(loaded);
       setLoading(false);
     });
