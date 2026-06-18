@@ -16,6 +16,7 @@ import {
 } from "firebase/auth";
 import { auth } from "@shared/infrastructure/firebase";
 import { loadUser } from "@identity/infrastructure/UserRepository";
+import { seedSystemCategories } from "@finance/infrastructure/seedSystemCategories";
 import type { User } from "@identity/domain/User";
 
 interface AuthState {
@@ -40,6 +41,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const loaded = await loadUser(firebaseUser.uid, firebaseUser.email);
+
+      if (loaded?.role === "Admin") {
+        // Идемпотентно — прескаче ако категорије већ постоје.
+        await seedSystemCategories();
+      }
+
       setUser(loaded);
       setLoading(false);
     });
